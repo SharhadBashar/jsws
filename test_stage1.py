@@ -18,8 +18,8 @@ from logger import Logger
 image_size = 256
 batch_size = 8
 c_output = 21
-experiment_name = "debug5"
-path_save_checkpoints = "./stage1.pth"
+experiment_name = "original"
+path_save_checkpoints = "./29000.pth"
 
 path_save_valid_voc = "output/validation/{}_voc".format(experiment_name)
 if not os.path.exists(path_save_valid_voc): os.mkdir(path_save_valid_voc)
@@ -33,12 +33,14 @@ net.load_state_dict(torch.load(path_save_checkpoints))
 mean = torch.Tensor([0.485, 0.456, 0.406])[None, ..., None, None].cuda()
 std = torch.Tensor([0.229, 0.224, 0.225])[None, ..., None, None].cuda()
 
-voc_val_img_dir = '/home/zeng/data/datasets/segmentation/VOCdevkit/VOC2012/JPEGImages'
-voc_val_gt_dir = '/home/zeng/data/datasets/segmentation/VOCdevkit/VOC2012/SegmentationClass'
-voc_val_split = '/home/zeng/data/datasets/segmentation/VOCdevkit/VOC2012/ImageSets/Segmentation/val.txt'
+voc_val_img_dir = '/home/s2bashar/Desktop/Thesis/jsws/datasets/segmentation/VOCdevkit/VOC2012/JPEGImages'
+voc_val_gt_dir = '/home/s2bashar/Desktop/Thesis/jsws/datasets/segmentation/VOCdevkit/VOC2012/SegmentationClass'
+voc_val_size_dir = '/home/s2bashar/Desktop/Thesis/jsws/datasets/segmentation/VOCdevkit/VOC2012/SegmentationClassAugSizeActual'
+voc_val_split = '/home/s2bashar/Desktop/Thesis/jsws/datasets/segmentation/VOCdevkit/VOC2012/ImageSets/Segmentation/val.txt'
 
-sal_val_img_dir = '/home/zeng/data/datasets/saliency/ECSSD/images'
-sal_val_gt_dir = '/home/zeng/data/datasets/saliency/ECSSD/masks'
+
+sal_val_img_dir = '/home/s2bashar/Desktop/Thesis/jsws/datasets/saliency/ECSSD/images'
+sal_val_gt_dir = '/home/s2bashar/Desktop/Thesis/jsws/datasets/saliency/ECSSD/masks'
 
 sal_val_loader = torch.utils.data.DataLoader(
     Saliency(sal_val_img_dir, sal_val_gt_dir,
@@ -46,7 +48,7 @@ sal_val_loader = torch.utils.data.DataLoader(
     batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
 voc_val_loader = torch.utils.data.DataLoader(
-    VOC(voc_val_img_dir, voc_val_gt_dir, voc_val_split,
+    VOC(voc_val_img_dir, voc_val_gt_dir, voc_val_size_dir, voc_val_split,
            crop=None, flip=False, rotate=None, size=image_size, training=False),
     batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
@@ -77,7 +79,7 @@ def val_sal():
 def val_voc():
     net.eval()
     with torch.no_grad():
-        for it, (img, gt, batch_name, WW, HH) in tqdm(enumerate(voc_val_loader), desc='train'):
+        for it, (img, gt, size, batch_name, WW, HH) in tqdm(enumerate(voc_val_loader), desc='train'):
             img = (img.cuda()-mean)/std
             outputs = net(img)
             batch_seg = outputs[0]
@@ -100,5 +102,5 @@ if __name__ == "__main__":
     fm, mae = val_sal()
     print(fm, mae)
     #net.load_state_dict(torch.load("output/checkpoints/debug/500.pth"))
-    #miou = val()
-    #print(miou)
+    miou = val_voc()
+    print(miou)

@@ -1,0 +1,8 @@
+*.swp
+*.pyc
+datasets/
+graph/
+output/
+results/
+stats/
+weights*

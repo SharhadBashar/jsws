@@ -5,7 +5,8 @@ import torch
 from torch.utils import data
 import pdb
 import random
-
+import pickle
+import time
 
 def rotated_rect_with_max_area(w, h, angle):
     """
@@ -256,7 +257,7 @@ class VOCSELF(_BaseData):
 
 
 class VOC(_BaseData):
-    def __init__(self, img_dir, gt_dir, split_file, img_format='jpg', gt_format='png', size=256, training=True,
+    def __init__(self, img_dir, gt_dir, size_dir, split_file, img_format='jpg', gt_format='png', size_format = 'pkl', size=256, training=True,
             crop=None, rotate=None, flip=False, tproc=False):
         super(VOC, self).__init__(crop=crop, rotate=rotate, flip=flip)
         self.training = training
@@ -264,11 +265,18 @@ class VOC(_BaseData):
         self.size = size
         with open(split_file, 'r') as f:
             names = f.read().split('\n')[:-1]
+       
+
         img_filenames = ['{}/{}.{}'.format(img_dir, name, img_format) for name in names]
         self.img_filenames = img_filenames
+        
         self.names = names
+        
         gt_filenames = ['{}/{}.{}'.format(gt_dir, _name, gt_format) for _name in names]
         self.gt_filenames = gt_filenames
+
+        size_filenames = ['{}/{}.{}'.format(size_dir, _name, size_format) for _name in names]
+        self.size_filenames = size_filenames
 
     def __len__(self):
         return len(self.names)
@@ -285,20 +293,60 @@ class VOC(_BaseData):
         gt = data[1]
         return img, gt
 
+    def verify(self, gt, name):
+
+        classCount = {
+            0:0,
+            1: 0,  2: 0,  3: 0,  4: 0,  5: 0, 
+            6: 0,  7: 0,  8: 0,  9: 0,  10: 0,
+            11: 0, 12: 0, 13: 0, 14: 0, 15: 0,
+            16: 0, 17: 0, 18: 0, 19: 0, 20: 0
+        }
+
+        im = np.asarray(gt)
+        imFlat = im.flatten()
+        
+        # Get size and count
+        size = imFlat.shape[0]
+        counts = np.unique(imFlat, return_counts = True)
+        classPresent = counts[0][0: -1]
+        count = counts[1][0: -1]
+        
+        # Assert lengths of arrays are the same
+        assert len(classPresent) == len(count), 'Length of class array not the same as length of count array'
+        
+        # Update dictionary
+        for i in range(len(classPresent)):
+        	classCount[classPresent[i]] = count[i] / size
+
+        print('verify ' + name)
+        print(classCount)
+
     def __getitem__(self, index):
         # load image
         img_file = self.img_filenames[index]
         img = Image.open(img_file).convert("RGB")
         gt_file = self.gt_filenames[index]
+        size_file = self.size_filenames[index]
+        # print(index)
+        # print(gt_file)
+        # print(size_file)
+        # print()
         name = self.names[index]
         w, h = img.size
-        gt = Image.open(gt_file).convert("P")
-        img = img.resize(gt.size)
+        gt_im = Image.open(gt_file).convert("P")
+        
+        # self.verify(gt_im, gt_file)
+        
+        img = img.resize(gt_im.size)
+        with open(size_file, 'rb') as f:
+            size = pickle.load(f)
+
         if self.training or self.tproc:
-            img, gt = self.train_proc(img, gt)
+            img, gt = self.train_proc(img, gt_im)
         if self.size is not None:
             img = img.resize((self.size, self.size))
-            gt = gt.resize((self.size, self.size))
+            gt = gt_im.resize((self.size, self.size))
         else:
             if min(w,h)<256:
                 ratio = 256.0/min(w,h)
@@ -307,17 +355,21 @@ class VOC(_BaseData):
             w = (w//16+1)*16
             h = (h//16+1)*16
             img = img.resize((w,h))
-            gt = gt.resize((w,h))
+            gt = gt_im.resize((w,h))
         img = np.array(img, dtype=np.float64) / 255.0
         img = img.transpose(2, 0, 1)
         img = torch.from_numpy(img).float()
 
         gt = np.array(gt, dtype=np.int64)
         gt = torch.from_numpy(gt).long()
+
+        size = np.array(list(size.values()), dtype = np.float64)
+        size = torch.from_numpy(size)
+        gt_im.close()
         if self.training:
-            return img, gt
+            return img, gt, size, name, w, h
         else:
-            return img, gt, name, w, h
+            return img, gt, size, name, w, h
 
 if __name__ =="__main__":
     import pdb
