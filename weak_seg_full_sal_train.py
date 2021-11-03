@@ -397,10 +397,10 @@ def train():
             sum_C = torch.sum((pred_cls_size[n] - size[n].cuda()) ** 2)
             sum_C_32x = torch.sum((pred_cls32x_size[n] - size[n].cuda()) ** 2)
 
-            sum_N_c += sum_C/(C - 1)
-            sum_N_c_32x += sum_C_32x/(C - 1)
+            sum_N_c += sum_C / (C - 1)
+            sum_N_c_32x += sum_C_32x / (C - 1)
 
-        loss_size = weight[2] * (sum_N_c + sum_N_c_32x)/N_c
+        loss_size = weight[2] * (sum_N_c + sum_N_c_32x) / N_c
 
         #loss_size = F.mse_loss(F.softmax(pred_cls[:, 1:], 1), size[:, 1:].float().cuda()) + F.mse_loss(F.softmax(pred_cls32x[:, 1:], 1), size[:, 1:].float().cuda()) #this does not work
         """loss 3_1 """
@@ -423,8 +423,8 @@ def train():
         #     pentaly32x_n = getPenalty(pred_cls32x_size[n], size[n])
         #     sum_C_32x = torch.sum((pred_cls32x_size[n] - pentaly32x_n.cuda()) ** 2)
 
-        #     sum_N_c += sum_C/(C - 1)
-        #     sum_N_c_32x += sum_C_32x/(C - 1)
+        #     sum_N_c += sum_C / (C - 1)
+        #     sum_N_c_32x += sum_C_32x / (C - 1)
         # loss_size = weight[0] * (sum_N_c + sum_N_c_32x) / N_c
         """loss 3_2 """
 
